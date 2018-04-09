@@ -6,9 +6,14 @@ import (
 	"reflect"
 )
 
-func GetBytes(data interface{}) []byte {
+func NewWriter(datas ...interface{}) *bytes.Buffer {
 	writer := bytes.NewBuffer([]byte{})
-	binary.Write(writer, binary.LittleEndian, data)
+	Write(writer, datas...)
+	return writer
+}
+
+func GetBytes(datas ...interface{}) []byte {
+	writer := NewWriter(datas...)
 	return writer.Bytes()
 }
 

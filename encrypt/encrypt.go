@@ -1,11 +1,11 @@
 package encrypt
 
 import (
-	"bytes"
-	"encoding/binary"
-	"github.com/sencydai/qyh15c/crc16"
 	"math/rand"
 	"time"
+
+	"github.com/sencydai/qyh15c/crc16"
+	"github.com/sencydai/qyh15c/pack"
 )
 
 type Encrypt struct {
@@ -60,9 +60,7 @@ func (e *Encrypt) GetCRC16ByPos(data []byte, offset, length int64) int16 {
 }
 
 func (e *Encrypt) GetCheckKey() int16 {
-	reader := bytes.NewBuffer([]byte{})
-	binary.Write(reader, binary.LittleEndian, e.sKey)
-	return crc16.Update(reader.Bytes(), 0, 0)
+	return crc16.Update(pack.GetBytes(e.sKey), 0, 0)
 }
 
 func (e *Encrypt) GetSelfSalt() uint32 {

@@ -2,77 +2,95 @@ package main
 
 import (
 	"bytes"
-	"fmt"
-	"github.com/sencydai/qyh15c/pack"
-	"github.com/sencydai/utils/timer"
-	"math/rand"
 	"time"
+
+	"github.com/sencydai/qyh15c/pack"
+	proto "github.com/sencydai/qyh15c/protocol"
+	"github.com/sencydai/utils/timer"
 )
 
-type MsgHandler func(*Socket, *bytes.Reader)
+type ServerMsgHandler func(*AccountData, *bytes.Reader)
+type ClientMsgHandler func(*AccountData)
 
 var (
-	HandleMgr = make(map[int]MsgHandler)
+	serverMsgHandles = make(map[int]ServerMsgHandler)
+	fightMsgs        = make([]ClientMsgHandler, 0)
+	commonMsgs       = make([]ClientMsgHandler, 0)
 )
 
-func init() {
+func serverMsgInit() {
 	//登陆
-	RegHandle(255, 1, HandleLogin)
-
+	RegServerHandle(proto.System, proto.SystemSLogin, HandleLogin)
 	//查询角色列表
-	RegHandle(255, 4, HandleCheckActorList)
+	RegServerHandle(proto.System, proto.SystemSActorLists, HandleCheckActorList)
 	//随机名称
-	RegHandle(255, 6, HandleRandomActorName)
+	RegServerHandle(proto.System, proto.SystemSRandomName, HandleRandomActorName)
 	//创建角色
-	RegHandle(255, 2, HandleCreateActor)
+	RegServerHandle(proto.System, proto.SystemSCreateActor, HandleCreateActor)
 	//进入游戏
-	RegHandle(255, 5, HandleLoginSuccess)
+	RegServerHandle(proto.System, proto.SystemSLoginGame, HandleLoginSuccess)
 	//战斗结果
-	RegHandle(52, 1, HandleFightResult)
-
+	RegServerHandle(proto.Fight, proto.FightSResult, HandleFightResult)
 }
 
-func RegHandle(sysId, cmdId byte, handle MsgHandler) {
+func clientMsgInit() {
+	RegFightMsg(sendEnterMainFuben)
+}
+
+func init() {
+	serverMsgInit()
+	clientMsgInit()
+}
+
+func RegServerHandle(sysId, cmdId byte, handle ServerMsgHandler) {
 	mark := (int(sysId) << 8) + int(cmdId)
-	HandleMgr[mark] = handle
+	serverMsgHandles[mark] = handle
 }
 
-func HandleMsg(sk *Socket, sysId, cmdId byte, reader *bytes.Reader) {
+func RegFightMsg(handle ClientMsgHandler) {
+	fightMsgs = append(fightMsgs, handle)
+}
+
+func RegCommonMsg(handle ClientMsgHandler) {
+	commonMsgs = append(commonMsgs, handle)
+}
+
+func HandleServereMsg(account *AccountData, sysId, cmdId byte, reader *bytes.Reader) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Printf("handle Msg %d %d error: %v\n", sysId, cmdId, err)
+			Printf(account, "handle Msg %d %d error: %v", sysId, cmdId, err)
 		}
 	}()
 
 	mark := (int(sysId) << 8) + int(cmdId)
-	handle, ok := HandleMgr[mark]
+	handle, ok := serverMsgHandles[mark]
 	if ok {
-		handle(sk, reader)
+		handle(account, reader)
 	}
 }
 
-func HandleLogin(sk *Socket, reader *bytes.Reader) {
+func HandleLogin(account *AccountData, reader *bytes.Reader) {
 	var code byte
 	pack.Read(reader, &code)
 	if code != 0 {
-		fmt.Printf("HandleLogin error: %s code(%d)\n", sk.accountName, code)
-		sk.conn.Close()
+		Printf(account, "HandleLogin error: code(%d)", code)
+		account.conn.Close()
 		return
 	}
 	//查询角色列表
-	send2Server(sk, 255, 4, nil)
+	send2Server(account, proto.System, proto.SystemCActorList, nil)
 }
 
-func HandleCheckActorList(sk *Socket, reader *bytes.Reader) {
+func HandleCheckActorList(account *AccountData, reader *bytes.Reader) {
 	var accountId int32
 	var code int32
 	pack.Read(reader, &accountId, &code)
 	if code < 0 {
 		return
 	}
-	sk.accountId = accountId
+	account.accountId = accountId
 	if code == 0 {
-		randomActorName(sk)
+		randomActorName(account)
 		return
 	}
 
@@ -82,18 +100,18 @@ func HandleCheckActorList(sk *Socket, reader *bytes.Reader) {
 
 	pack.Read(reader, &actorId, &name, &head, &sex, &level, &job, &camp)
 
-	sendLoginGame(sk, actorId)
+	sendLoginGame(account, actorId)
 }
 
-func randomActorName(s *Socket) {
-	send2Server(s, 255, 6, pack.GetBytes(rand.Int31n(2)+1))
+func randomActorName(account *AccountData) {
+	send2Server(account, proto.System, proto.SystemCRandomName, pack.GetBytes(RandInt31n(1, 2)))
 }
 
-func HandleRandomActorName(s *Socket, reader *bytes.Reader) {
+func HandleRandomActorName(account *AccountData, reader *bytes.Reader) {
 	var code int32
 	pack.Read(reader, &code)
 	if code != 0 {
-		randomActorName(s)
+		randomActorName(account)
 		return
 	}
 
@@ -101,53 +119,81 @@ func HandleRandomActorName(s *Socket, reader *bytes.Reader) {
 	var name string
 	pack.Read(reader, &sex, &name)
 
-	writer := bytes.NewBuffer([]byte{})
-	pack.Write(writer, name, sex, int32(1), int32(1), byte(1), "pf_auto")
-	send2Server(s, 255, 2, writer.Bytes())
+	send2Server(account, proto.System, proto.SystemCCreateActor, pack.GetBytes(name, sex, int32(1), int32(1), byte(1), "pf_test"))
 }
 
-func HandleCreateActor(s *Socket, reader *bytes.Reader) {
+func HandleCreateActor(account *AccountData, reader *bytes.Reader) {
 	var actorId float64
 	var code int32
 	pack.Read(reader, &actorId, &code)
 	if code != 0 {
-		s.conn.Close()
+		account.conn.Close()
 		return
 	}
-	sendLoginGame(s, actorId)
+	sendLoginGame(account, actorId)
 }
 
-func sendLoginGame(s *Socket, actorId float64) {
-	writer := bytes.NewBuffer([]byte{})
-	pack.Write(writer, actorId, "pt_auto")
-	s.actorId = actorId
-	send2Server(s, 255, 5, writer.Bytes())
+func sendLoginGame(account *AccountData, actorId float64) {
+	send2Server(account, proto.System, proto.SystemCLoginGame, pack.GetBytes(actorId, "pf_test"))
 }
 
-func HandleLoginSuccess(s *Socket, reader *bytes.Reader) {
+func HandleLoginSuccess(account *AccountData, reader *bytes.Reader) {
 	var code int32
 	pack.Read(reader, &code)
 
-	fmt.Printf("accountName(%s) login game code(%d),actorId(%d)\n", s.accountName, code, int64(s.actorId))
+	Printf(account, "login game code(%d)", code)
 	if code != 0 {
-		s.conn.Close()
+		account.conn.Close()
 		return
 	}
-	d := time.Duration(*delay)
-	timer.After(time.Second*d, enterMainFuben, s)
+
+	t := timer.Loop(time.Second*5, time.Second*time.Duration(gConfigs.ChatPeriod), -1, sendChatMsg, account)
+	account.timers = append(account.timers, t)
+
+	t = timer.Loop(time.Second*7, time.Second*time.Duration(gConfigs.FightPeriod), -1, randSendFightMsg, account)
+	account.timers = append(account.timers, t)
+
+	t = timer.Loop(time.Second*7, time.Second*time.Duration(gConfigs.MsgPeriod), -1, randomSendCommonMsg, account)
+	account.timers = append(account.timers, t)
 }
 
-func enterMainFuben(s *Socket) {
-	send2Server(s, 181, 2, nil)
+func sendChatMsg(account *AccountData) {
+	if RandInt31n(0, 100) >= 3 {
+		return
+	}
+	index := RandInt31n(0, int32(len(gConfigs.ChatMsgs)-1))
+	msg := gConfigs.ChatMsgs[index]
+	send2Server(account, proto.Chat, proto.ChatCSendChatMsg, pack.GetBytes(byte(1), msg, ""))
 }
 
-func HandleFightResult(s *Socket, reader *bytes.Reader) {
+func randSendFightMsg(account *AccountData) {
+	if len(fightMsgs) == 0 {
+		return
+	}
+	index := RandInt31n(0, int32(len(fightMsgs)-1))
+	fightMsgs[index](account)
+}
+
+func randomSendCommonMsg(account *AccountData) {
+	if RandInt31n(0, 10000) < 1 {
+		account.conn.Close()
+		return
+	}
+	if len(commonMsgs) == 0 {
+		return
+	}
+	index := RandInt31n(0, int32(len(commonMsgs)-1))
+	commonMsgs[index](account)
+}
+
+func sendEnterMainFuben(account *AccountData) {
+	send2Server(account, proto.Fuben, proto.FubenCLoginMainFuben, nil)
+}
+
+func HandleFightResult(account *AccountData, reader *bytes.Reader) {
 	var guid float64
 	var ft int32
 	pack.Read(reader, &guid, &ft)
 
-	send2Server(s, 52, 2, pack.GetBytes(ft))
-
-	d := time.Duration(*delay)
-	timer.After(time.Second*d, enterMainFuben, s)
+	send2Server(account, proto.Fight, proto.FightCGetAwards, pack.GetBytes(ft))
 }

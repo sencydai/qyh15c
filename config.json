@@ -1,12 +1,13 @@
 {
-    "startIndex": 1001,
-    "clientCount": 1,
+    "namePrefix": "test",
+    "startIndex": 1000,
+    "clientCount": 3000,
     "scheme": "ws",
-    "host": "localhost:9401",
-    "serverId": 522,
-    "fightPeriod": 20,
-    "chatPeriod": 20,
-    "msgPeriod": 5,
+    "host": "10.10.1.113:9402",
+    "serverId": 10,
+    "fightPeriod": 10,
+    "chatPeriod": 15,
+    "msgPeriod": 10,
     "chatMsgs" :[
         "加好友",
         "加公会",
@@ -19,6 +20,7 @@
         "信不信我分分钟教你做人",
         "左青龙，右白虎，中间有个二百五",
         "天王盖地虎，玉帝x王母",
-        "支持，威武，有希望了"
+        "支持，威武，有希望了",
+        "有钱真的可以为所欲为"
     ]
 }

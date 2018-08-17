@@ -68,6 +68,8 @@ func startClient(i int) {
 
 	account.onConnect()
 
+	buff := make([]byte, 0)
+	reader := bytes.NewReader(buff)
 	//读数据
 	for {
 		_, data, err := account.conn.ReadMessage()
@@ -79,11 +81,11 @@ func startClient(i int) {
 			account.setTargetSalt(data)
 			continue
 		}
-		if len(data) < pack.HEAD_SIZE {
-			log.Printf(account, "recv error: %s", "error head size")
-			break
+		buff = append(buff, data...)
+		if len(buff) < pack.HEAD_SIZE {
+			continue
 		}
-		reader := bytes.NewReader(data)
+		reader.Reset(buff)
 		var tag int
 		pack.Read(reader, &tag)
 		if tag != pack.DEFAULT_TAG {
@@ -97,11 +99,11 @@ func startClient(i int) {
 			log.Printf(account, "recv error: %s", "error data len")
 			break
 		}
-		data = data[pack.HEAD_SIZE:]
-		if int(dataLen) != len(data) {
-			log.Printf(account, "recv error: %s", "error data len")
-			break
+		data = buff[pack.HEAD_SIZE : pack.HEAD_SIZE+dataLen]
+		if len(data) < dataLen {
+			continue
 		}
+		buff = buff[pack.HEAD_SIZE+dataLen:]
 		reader.Reset(data)
 		var sysId byte
 		var cmdId byte

@@ -1,9 +1,9 @@
 {
-    "namePrefix": "test",
-    "startIndex": 1000,
-    "clientCount": 3000,
+    "namePrefix": "client",
+    "startIndex": 1,
+    "clientCount": 1000,
     "scheme": "ws",
-    "host": "10.10.1.113:9402",
+    "host": "10.10.13.35:9402",
     "serverId": 10,
     "fightPeriod": 10,
     "chatPeriod": 15,

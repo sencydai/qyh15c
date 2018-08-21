@@ -99,11 +99,12 @@ func startClient(i int) {
 			log.Printf(account, "recv error: %s", "error data len")
 			break
 		}
-		data = buff[pack.HEAD_SIZE : pack.HEAD_SIZE+dataLen]
-		if len(data) < dataLen {
+		size := pack.HEAD_SIZE + dataLen
+		if len(data) < size {
 			continue
 		}
-		buff = buff[pack.HEAD_SIZE+dataLen:]
+		data = buff[pack.HEAD_SIZE:size]
+		buff = buff[size:]
 		reader.Reset(data)
 		var sysId byte
 		var cmdId byte

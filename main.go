@@ -89,14 +89,14 @@ func startClient(i int) {
 		var tag int
 		pack.Read(reader, &tag)
 		if tag != pack.DEFAULT_TAG {
-			log.Printf(account, "recv error: %s", "error default tag")
+			log.Printf(account, "recv error error default tag %v", buff)
 			break
 		}
 
 		var dataLen int
 		pack.Read(reader, &dataLen)
 		if dataLen < 2 {
-			log.Printf(account, "recv error: %s", "error data len")
+			log.Printf(account, "recv error data len %v", buff)
 			break
 		}
 		size := pack.HEAD_SIZE + dataLen
@@ -133,7 +133,7 @@ func main() {
 
 	for i := gConfigs.StartIndex; i < (gConfigs.StartIndex + gConfigs.ClientCount); i++ {
 		go startClient(i)
-		time.Sleep(time.Millisecond * 200)
+		time.Sleep(time.Millisecond * 50)
 	}
 
 	signalC := make(chan os.Signal, 1)

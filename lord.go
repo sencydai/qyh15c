@@ -193,9 +193,6 @@ func sendLordLookupHero(account *Account) {
 }
 
 func sendLordRandomName(account *Account) {
-	if base.Rand(0, 10000) > 0 {
-		return
-	}
 	account.send(proto.Lord, proto.LordCRandomName)
 }
 

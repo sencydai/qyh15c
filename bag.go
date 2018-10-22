@@ -207,8 +207,9 @@ func HandleBagHeroUpdate(account *Account, reader *bytes.Reader) {
 
 func HandleBagHeroDelete(account *Account, reader *bytes.Reader) {
 	heros := GetBagHeros(account)
+	var source byte
 	var count int16
-	pack.Read(reader, &count)
+	pack.Read(reader, &source, &count)
 	for i := int16(0); i < count; i++ {
 		var guid int
 		pack.Read(reader, &guid)

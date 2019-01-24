@@ -3,9 +3,10 @@ package main
 import (
 	"bytes"
 
+	"xgame/proto/pack"
+	proto "xgame/proto/protocol"
+
 	"github.com/sencydai/gameworld/base"
-	"github.com/sencydai/gameworld/proto/pack"
-	proto "github.com/sencydai/gameworld/proto/protocol"
 )
 
 type LordData struct {
@@ -82,6 +83,8 @@ func init() {
 	RegCommonMsg(sendLordSkillUpgrade)
 	//技能位置
 	RegCommonMsg(sendLordSkillExchangePos)
+	//反馈
+	RegCommonMsg(sendFeedback)
 }
 
 func HandleLordDecorInit(account *Account, reader *bytes.Reader) {
@@ -211,4 +214,8 @@ func sendLordSkillUpgrade(account *Account) {
 
 func sendLordSkillExchangePos(account *Account) {
 	account.send(proto.Lord, proto.LordCSkillExchangePos, base.Rand(1, 5), base.Rand(1, 5))
+}
+
+func sendFeedback(account *Account) {
+	account.send(proto.Base, proto.BaseCFeedback, int(0), "test feedback")
 }

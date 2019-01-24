@@ -174,7 +174,7 @@ func randSendFightMsg(account *Account) {
 }
 
 func randSendCommonMsg(account *Account) {
-	// if base.Rand(0, 10000) < 1 {
+	// if base.Rand(0, 5000) < 1 {
 	// 	account.conn.Close()
 	// 	return
 	// }

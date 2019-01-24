@@ -1,12 +1,12 @@
 {
-    "namePrefix": "cehua",
+    "namePrefix": "test",
     "startIndex": 1,
-    "clientCount": 400,
+    "clientCount": 3000,
     "scheme": "ws",
-    "host": "sencydai.top:9010",
-    "serverId": 3,
+    "host": "localhost:9000",
+    "serverId": 1,
     "fightPeriod": 10,
-    "chatPeriod": 15,
+    "chatPeriod": 30,
     "msgPeriod": 10,
     "chatMsgs" :[
         "加好友",

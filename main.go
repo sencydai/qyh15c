@@ -63,7 +63,7 @@ func startClient(i int) {
 			log.Print(account, err)
 		}
 		account.Close()
-		After(nil, fmt.Sprintf("startClient_%d", i), 15, startClient, i)
+		After(nil, fmt.Sprintf("startClient_%d", i), 300, startClient, i)
 	}()
 
 	account.onConnect()
